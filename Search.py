@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 def Search(DOI):
     headers ={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 UBrowser/6.1.2107.204 Safari/537.36'}
     public = "https://sci-hub."
-    url_pool = ["ren"]
+    url_pool = ["shop","ren","si","tw"]
     
     for each in url_pool:
         try:
@@ -19,7 +19,7 @@ def Search(DOI):
             url_avaliable = public+each
             break
         except:
-            print("\n 更换线路...")
+            print("\n更换线路...")
     
     url = url_avaliable + "/" + DOI
     res = get(url,headers=headers,stream=True)
@@ -29,6 +29,8 @@ def Search(DOI):
     
     if target.split("//")[0] !="https:":
         target = "https:"+target
+    
+    print("\n已找到可用下载链接！请等待...")
     return [target,filename]
 
 if __name__=="__main__":
