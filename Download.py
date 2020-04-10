@@ -6,27 +6,62 @@ Created on Thu Apr  9 00:11:05 2020
 """
 
 from requests import get
+from threading import Thread
 
-def Download(url,filename):
-    attempt = 1
-    while attempt<4:
-        headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 UBrowser/6.1.2107.204 Safari/537.36'}
-        res = get(url, headers=headers)
-        pdf_size = int(res.headers['content-length'])
-        data_size = 0
-        with open(filename,"wb+") as fp:
-            for chunk in res.iter_content(chunk_size=8096):
-                fp.write(chunk)
-                data_size = data_size+len(chunk)
-                percentage = (data_size/pdf_size)*100
-                print("\r下载进度：%d%%(%d/%d)" % (percentage, data_size ,pdf_size), end="")
-        if percentage==100:
-            print("\n下载成功！")
-            break
-        else:
-            attempt = attempt + 1
-            print("\n下载失败！\n第"+str(attempt)+"次尝试...")
-if __name__=="__main__":
+class Downloader(object):
     
-    url = "https://sci-hub.shop/downloads/2019-10-20/09/zhang2019.pdf"
-    Download(url,"test.pdf")
+    def __init__(self,url,filename,n):
+        self.url = url
+        self.filename = filename
+        self.n = n
+        self.headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 UBrowser/6.1.2107.204 Safari/537.36'}
+        # self.proxies = {'http':'http://60.251.33.224:80',
+        #                 'http':'http://112.118.205.64:80',
+        #                 'http':'http://165.22.98.86:8080',
+        #                 'http':'http://202.5.221.69:80',
+        #                 'http':'http://202.5.221.66:80',
+        #                 'http':'http://125.46.0.62:53281'}
+        self.proxies = {}
+    
+    def get_pdfinfo(self): # 调用1：获得pdf大小，分割n线程
+        res = get(self.url, headers=self.headers, proxies=self.proxies)
+        pdf_size = int(res.headers['content-length'])
+        pdf_persize = int(pdf_size/self.n)
+        start = []
+        end = []
+        for i in range(0,self.n):
+            start.append(i*pdf_persize)
+            end.append((i+1)*pdf_persize-1)
+        end[self.n-1] = pdf_size
+        return [start,end]
+        
+    def Download_interval(self,start,end,fp): # 调用2：分线程下载
+        attempt = 1
+        while attempt < 4:
+            res = get(self.url, headers={'Range':'bytes=%d-%d' % (start,end)}, proxies=self.proxies)
+            fp.write(res.content)
+            
+            if len(res.content)<(end-start):
+                attempt = attempt + 1
+                print('重试...')
+            else:
+                break
+
+    def Download(self): # 运行1
+        temp = []
+        [start,end] = self.get_pdfinfo()
+        fp = open(self.filename,'wb')
+        for j in range(0,self.n):
+            th = Thread(target = self.Download_interval,args=(start[j],end[j],fp,))
+            th.setDaemon(True)
+            th.start()
+            temp.append(th)   
+        for j in temp:
+            j.join()
+        fp.close()
+        print('下载完成！')
+        
+if __name__ == '__main__':
+    url = 'http://www.sci-hub.shop/downloads/2019-10-20/09/zhang2019.pdf'
+    d = Downloader(url,'test.pdf',1)
+    d.Download()

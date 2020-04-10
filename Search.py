@@ -10,28 +10,28 @@ from bs4 import BeautifulSoup
 
 def Search(DOI):
     headers ={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 UBrowser/6.1.2107.204 Safari/537.36'}
-    public = "https://sci-hub."
-    url_pool = ["shop","ren","si","tw"]
+    public = 'https://www.sci-hub.'
+    url_pool = ['shop','ren','si','tw','se']
     
     for each in url_pool:
         try:
-            get(public+each,headers=headers,stream=True)
+            get(public+each, headers=headers, timeout=10)
             url_avaliable = public+each
             break
         except:
-            print("\n更换线路...")
+            print('\n更换线路...')
     
-    url = url_avaliable + "/" + DOI
+    url = url_avaliable + '/' + DOI
     res = get(url,headers=headers,stream=True)
     soup = BeautifulSoup(res.text,'html.parser')
-    target = soup.find("iframe",id="pdf")["src"].split("#")[0]
-    filename = soup.find("i").text.split(".")[0] + ".pdf"
+    target = soup.find('iframe',id='pdf')['src'].split('#')[0]
+    filename = soup.find('i').text.split('.')[0] + '.pdf'
     
-    if target.split("//")[0] !="https:":
-        target = "https:"+target
+    if target.split('//')[0] !='https:':
+        target = 'https:' + target
     
-    print("\n已找到可用下载链接！请等待...")
+    print('\n已找到可用下载链接！请等待...')
     return [target,filename]
 
-if __name__=="__main__":
-    [url,filename]=Search("10.3390/s19183972")
+if __name__ == '__main__':
+    [url,filename]=Search('10.3390/s19183972')
