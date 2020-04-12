@@ -25,26 +25,32 @@ class Downloader(object):
     
     def get_pdfinfo(self): # 调用1：获得pdf大小，分割n线程
         res = get(self.url, headers=self.headers, proxies=self.proxies)
-        pdf_size = int(res.headers['content-length'])
-        pdf_persize = int(pdf_size/self.n)
+        self.pdf_size = int(res.headers['content-length'])
+        pdf_persize = int(self.pdf_size/self.n)
         start = []
         end = []
         for i in range(0,self.n):
             start.append(i*pdf_persize)
             end.append((i+1)*pdf_persize-1)
-        end[self.n-1] = pdf_size
+        end[self.n-1] = self.pdf_size
         return [start,end]
         
     def Download_interval(self,start,end,fp): # 调用2：分线程下载
         attempt = 1
         while attempt < 4:
-            res = get(self.url, headers={'Range':'bytes=%d-%d' % (start,end)}, proxies=self.proxies)
-            fp.write(res.content)
+            res = get(self.url, headers={'Range':'bytes=%d-%d' % (start,end)}, proxies=self.proxies, stream=True)
+            data = 0
+            for chunk in res.iter_content(chunk_size=102400):
+                fp.write(chunk)
+                data = data + len(chunk)
+                percentage = data/self.pdf_size *100
+                print('\r[%s] Downloading: %d %% ( %d / %d )' % (self.filename, percentage, data, self.pdf_size),end = '')
             
             if len(res.content)<(end-start):
                 attempt = attempt + 1
                 print('重试...')
             else:
+                print('下载完成！')
                 break
 
     def Download(self): # 运行1
@@ -59,9 +65,8 @@ class Downloader(object):
         for j in temp:
             j.join()
         fp.close()
-        print('下载完成！')
         
 if __name__ == '__main__':
-    url = 'http://www.sci-hub.shop/downloads/2019-10-20/09/zhang2019.pdf'
+    url = 'http://www.sci-hub.ren/downloads/2019-10-20/09/zhang2019.pdf'
     d = Downloader(url,'test.pdf',1)
     d.Download()
